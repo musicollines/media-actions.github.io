@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liste d'événements</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1 { color: #333; }
+    form { margin-bottom: 20px; }
+    input[type="text"], input[type="date"] { padding: 8px; margin-right: 10px; }
+    button { padding: 8px 16px; background: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 12px; margin-bottom: 8px; background: #f8f9fa; border-left: 4px solid #007bff; }
+    .date { font-weight: bold; color: #28a745; margin-right: 10px; }
+    .passee { display: none; } /* Pour debug si besoin */
+  </style>
+</head>
+<body>
+  <h1>Événements à venir (anté-chronologiques)</h1>
+  
+  <form id="form-evenement">
+    <input type="text" id="titre" placeholder="Titre de l'événement" required>
+    <input type="date" id="date" required>
+    <button type="submit">Ajouter</button>
+  </form>
+  
+  <button id="rafraichir">Rafraîchir (suppr. passées)</button>
+  <ul id="liste-evenements"></ul>
+
+  <script>
+    const form = document.getElementById("form-evenement");
+    const rafraichirBtn = document.getElementById("rafraichir");
+    const liste = document.getElementById("liste-evenements");
+
+    // Charger les événements depuis localStorage (ou tableau vide)
+    function chargerEvenements() {
+      const data = localStorage.getItem("evenements");
+      return data ? JSON.parse(data) : []; // [web:33][web:38]
+    }
+
+    // Sauvegarder dans localStorage
+    function sauvegarderEvenements(evenements) {
+      localStorage.setItem("evenements", JSON.stringify(evenements));
+    }
+
+    // Date du jour à minuit
+    function dateAujourdhui() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today;
+    }
+
+    // Afficher la liste filtrée et triée
+    function afficherListe() {
+      const evenements = chargerEvenements();
+      const today = dateAujourdhui();
+
+      // Supprimer définitivement les passées (filtrer et sauvegarder)
+      const futures = evenements.filter(ev => new Date(ev.date) >= today);
+      if (futures.length !== evenements.length) {
+        sauvegarderEvenements(futures); // Suppression auto persistante [web:6][web:15]
+      }
+
+      // Trier anté-chronologique
+      futures.sort((a, b) => new Date(b.date) - new Date(a.date)); // [web:3]
+
+      // Générer HTML
+      liste.innerHTML = "";
+      futures.forEach(ev => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="date">${ev.date}</span>${ev.titre}`;
+        liste.appendChild(li);
+      });
+    }
+
+    // Ajouter un événement
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const evenements = chargerEvenements();
+      evenements.push({
+        titre: document.getElementById("titre").value,
+        date: document.getElementById("date").value
+      });
+      sauvegarderEvenements(evenements);
+      form.reset();
+      afficherListe();
+    });
+
+    // Rafraîchir
+    rafraichirBtn.addEventListener("click", afficherListe);
+
+    // Auto au chargement
+    afficherListe();
+  </script>
+</body>
+</html>
